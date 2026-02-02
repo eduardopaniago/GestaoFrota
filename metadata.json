@@ -1,0 +1,7 @@
+{
+  "name": "FrotaFin - Gestão de Frotas",
+  "description": "Sistema profissional de gestão financeira para frotas de caminhão, incluindo lançamentos de receitas e despesas, DRE automático e gestão de categorias personalizáveis.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
