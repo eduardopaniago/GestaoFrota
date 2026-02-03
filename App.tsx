@@ -18,7 +18,6 @@ import AIIntelligentEntry from './components/AIIntelligentEntry';
 import NotificationCenter from './components/NotificationCenter';
 import CloudSync from './components/CloudSync';
 
-// Helper to generate IDs safely on all mobile browsers
 const generateId = () => {
   try {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -50,7 +49,6 @@ const App: React.FC = () => {
     } catch (e) { return ''; }
   });
 
-  // Estados de Persistência
   const [categories, setCategories] = useState<Category[]>(() => {
     try {
       const saved = localStorage.getItem('frotafin_categories');
@@ -103,7 +101,6 @@ const App: React.FC = () => {
     } catch (e) { return []; }
   });
 
-  // Efeitos para salvamento local
   useEffect(() => { localStorage.setItem('frotafin_categories', JSON.stringify(categories)); }, [categories]);
   useEffect(() => { localStorage.setItem('frotafin_cargo_types', JSON.stringify(cargoTypes)); }, [cargoTypes]);
   useEffect(() => { localStorage.setItem('frotafin_trucks', JSON.stringify(trucks)); }, [trucks]);
@@ -140,9 +137,7 @@ const App: React.FC = () => {
   };
 
   const performBackup = () => {
-    const allData = {
-      categories, cargoTypes, trucks, fuelRecords, transactions, budgets, maintenances, companyName
-    };
+    const allData = { categories, cargoTypes, trucks, fuelRecords, transactions, budgets, maintenances, companyName };
     const now = new Date().toISOString();
     setLastSyncDate(now);
     localStorage.setItem('frotafin_last_sync', now);
@@ -276,7 +271,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900 relative">
+    <div className="flex h-screen w-screen bg-slate-50 text-slate-900 overflow-hidden relative">
       <Sidebar 
         currentView={currentView} 
         setView={handleSetView} 
@@ -285,7 +280,7 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)} 
       />
       
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <Header 
           currentView={currentView} 
           pendingCount={pendingTransactions.length} 
@@ -293,7 +288,7 @@ const App: React.FC = () => {
           onToggleSidebar={() => setIsSidebarOpen(true)}
         />
         
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full pb-24 md:pb-8">
+        <main className="flex-1 overflow-y-auto safe-scroll p-4 md:p-8 w-full max-w-7xl mx-auto pb-24 md:pb-8">
           <NotificationCenter 
             pendingTransactions={pendingTransactions} 
             categories={categories}

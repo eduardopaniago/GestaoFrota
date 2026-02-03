@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="h-full overflow-hidden">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -13,12 +13,12 @@
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
-            overflow: hidden;
+            height: 100%;
+            overflow: hidden; /* Mantém a tela fixa para o App gerenciar a rolagem */
         }
         #root {
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
+            height: 100%;
+            width: 100%;
         }
         #loading-screen {
             position: fixed;
@@ -54,6 +54,16 @@
             overflow: auto;
             font-family: monospace;
             font-size: 12px;
+        }
+
+        /* Melhora a rolagem em dispositivos móveis */
+        .safe-scroll {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            overscroll-behavior-y: contain;
+        }
+        .safe-scroll::-webkit-scrollbar {
+            display: none;
         }
     </style>
     
