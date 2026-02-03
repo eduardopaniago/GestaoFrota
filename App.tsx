@@ -285,7 +285,7 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)} 
       />
       
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-hidden">
         <Header 
           currentView={currentView} 
           pendingCount={pendingTransactions.length} 

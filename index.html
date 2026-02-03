@@ -20,6 +20,10 @@
             min-height: 100vh;
         }
     </style>
+    <!-- Polyfill para garantir que o app não quebre sem process.env -->
+    <script>
+      window.process = window.process || { env: { NODE_ENV: 'production' } };
+    </script>
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script type="importmap">
