@@ -29,7 +29,7 @@
             justify-content: center;
             background-color: #ffffff;
             z-index: 9999;
-            transition: opacity 0.4s ease-out;
+            transition: opacity 0.5s ease;
         }
         .spinner {
             width: 40px;
@@ -40,44 +40,27 @@
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .emergency-btn {
-            margin-top: 24px;
-            padding: 10px 20px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            display: none;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        }
     </style>
     
     <script>
-        // Polyfills fundamentais para compatibilidade mobile e deploy estável
+        // Polyfills e Configurações Globais
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
         
-        // Resolve o aviso de node-domexception forçando o uso do nativo da plataforma
-        if (typeof window.DOMException === 'undefined') {
-            window.DOMException = Error; 
-        }
+        // Resolve o aviso de node-domexception garantindo o nativo
+        if (typeof window.DOMException === 'undefined') { window.DOMException = Error; }
 
-        // Script de segurança: Se o React falhar em montar em 8 segundos, mostra botão de forçar entrada
-        setTimeout(() => {
-            const btn = document.getElementById('emergency-btn');
-            if (btn) btn.style.display = 'block';
-        }, 8000);
-
-        function forceAppStart() {
-            const loading = document.getElementById('loading-screen');
-            if (loading) {
-                loading.style.opacity = '0';
-                setTimeout(() => loading.style.display = 'none', 400);
-            }
-        }
+        // Fallback de segurança: remove o loading se o React demorar demais (crash silencioso)
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                if (loader && loader.style.display !== 'none') {
+                    console.warn("Remoção forçada da tela de loading via timeout de segurança.");
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 500);
+                }
+            }, 5000);
+        });
     </script>
 
     <script type="importmap">
@@ -100,11 +83,9 @@
 <body>
     <div id="loading-screen">
         <div class="spinner"></div>
-        <p style="margin-top: 16px; color: #1e293b; font-weight: 700; font-size: 15px;">Carregando FrotaFin...</p>
-        <button id="emergency-btn" class="emergency-btn" onclick="forceAppStart()">O app não carregou? Clique aqui</button>
+        <p style="margin-top: 16px; color: #1e293b; font-weight: 700; font-size: 14px;">Iniciando Sistema...</p>
     </div>
     <div id="root"></div>
-    <!-- Carregamento do Tailwind via CDN seguro -->
     <script src="https://cdn.tailwindcss.com"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
