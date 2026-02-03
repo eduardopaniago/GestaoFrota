@@ -18,59 +18,89 @@ import AIIntelligentEntry from './components/AIIntelligentEntry';
 import NotificationCenter from './components/NotificationCenter';
 import CloudSync from './components/CloudSync';
 
+// Helper to generate IDs safely on all mobile browsers
+const generateId = () => {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+  } catch (e) {}
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('DASHBOARD');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('frotafin_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('frotafin_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
   });
   
   const [companyName, setCompanyName] = useState<string>(() => {
-    return localStorage.getItem('frotafin_company_name') || 'Minha Transportadora';
+    try {
+      return localStorage.getItem('frotafin_company_name') || 'Minha Transportadora';
+    } catch (e) { return 'Minha Transportadora'; }
   });
 
   const [lastSyncDate, setLastSyncDate] = useState<string>(() => {
-    return localStorage.getItem('frotafin_last_sync') || '';
+    try {
+      return localStorage.getItem('frotafin_last_sync') || '';
+    } catch (e) { return ''; }
   });
 
   // Estados de Persistência
   const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('frotafin_categories');
-    return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+    try {
+      const saved = localStorage.getItem('frotafin_categories');
+      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+    } catch (e) { return INITIAL_CATEGORIES; }
   });
 
   const [cargoTypes, setCargoTypes] = useState<CargoTypeCategory[]>(() => {
-    const saved = localStorage.getItem('frotafin_cargo_types');
-    return saved ? JSON.parse(saved) : INITIAL_CARGO_TYPES;
+    try {
+      const saved = localStorage.getItem('frotafin_cargo_types');
+      return saved ? JSON.parse(saved) : INITIAL_CARGO_TYPES;
+    } catch (e) { return INITIAL_CARGO_TYPES; }
   });
 
   const [trucks, setTrucks] = useState<Truck[]>(() => {
-    const saved = localStorage.getItem('frotafin_trucks');
-    return saved ? JSON.parse(saved) : [
-      { id: 't1', plate: 'ABC-1234', model: 'Volvo FH 540' },
-      { id: 't2', plate: 'XYZ-9999', model: 'Scania R 450' }
-    ];
+    try {
+      const saved = localStorage.getItem('frotafin_trucks');
+      return saved ? JSON.parse(saved) : [
+        { id: 't1', plate: 'ABC-1234', model: 'Volvo FH 540' },
+        { id: 't2', plate: 'XYZ-9999', model: 'Scania R 450' }
+      ];
+    } catch (e) { return []; }
   });
 
   const [fuelRecords, setFuelRecords] = useState<FuelRecord[]>(() => {
-    const saved = localStorage.getItem('frotafin_fuel');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('frotafin_fuel');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('frotafin_transactions');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('frotafin_transactions');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
 
   const [budgets, setBudgets] = useState<BudgetRequest[]>(() => {
-    const saved = localStorage.getItem('frotafin_budgets');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('frotafin_budgets');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
 
   const [maintenances, setMaintenances] = useState<MaintenanceOrder[]>(() => {
-    const saved = localStorage.getItem('frotafin_maintenances');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('frotafin_maintenances');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
 
   // Efeitos para salvamento local
@@ -84,7 +114,6 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('frotafin_user', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('frotafin_company_name', companyName); }, [companyName]);
 
-  // Lógica de fechamento automático ao mudar de tela no mobile
   const handleSetView = (view: View) => {
     setCurrentView(view);
     setIsSidebarOpen(false);
@@ -141,29 +170,29 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, dueDate: tomorrowStr } : tx));
   };
 
-  const addCategory = (cat: Omit<Category, 'id'>) => setCategories(prev => [...prev, { ...cat, id: crypto.randomUUID() }]);
+  const addCategory = (cat: Omit<Category, 'id'>) => setCategories(prev => [...prev, { ...cat, id: generateId() }]);
   const deleteCategory = (id: string) => {
     if (transactions.some(tx => tx.categoryId === id)) return alert("Categoria em uso!");
     setCategories(prev => prev.filter(c => c.id !== id));
   };
 
-  const addCargoType = (ct: Omit<CargoTypeCategory, 'id'>) => setCargoTypes(prev => [...prev, { ...ct, id: crypto.randomUUID() }]);
+  const addCargoType = (ct: Omit<CargoTypeCategory, 'id'>) => setCargoTypes(prev => [...prev, { ...ct, id: generateId() }]);
   const deleteCargoType = (id: string) => {
     if (transactions.some(tx => tx.cargoTypeId === id)) return alert("Este tipo de carga está sendo usado em lançamentos!");
     setCargoTypes(prev => prev.filter(ct => ct.id !== id));
   };
 
-  const addTruck = (t: Omit<Truck, 'id'>) => setTrucks(prev => [...prev, { ...t, id: crypto.randomUUID() }]);
+  const addTruck = (t: Omit<Truck, 'id'>) => setTrucks(prev => [...prev, { ...t, id: generateId() }]);
   const deleteTruck = (id: string) => {
     if (transactions.some(tx => tx.truckId === id) || fuelRecords.some(f => f.truckId === id)) return alert("Este veículo possui registros e não pode ser excluído!");
     setTrucks(prev => prev.filter(t => t.id !== id));
   };
 
-  const addTransaction = (tx: Omit<Transaction, 'id'>) => setTransactions(prev => [...prev, { ...tx, id: crypto.randomUUID() }]);
+  const addTransaction = (tx: Omit<Transaction, 'id'>) => setTransactions(prev => [...prev, { ...tx, id: generateId() }]);
   const deleteTransaction = (id: string) => setTransactions(prev => prev.filter(t => t.id !== id));
 
   const addFuelRecord = (rec: Omit<FuelRecord, 'id'>) => {
-    const fuelId = crypto.randomUUID();
+    const fuelId = generateId();
     const newFuel = { ...rec, id: fuelId };
     setFuelRecords(prev => [...prev, newFuel]);
     const fuelCategory = categories.find(c => c.name.toLowerCase().includes('combustível'));
@@ -193,19 +222,19 @@ const App: React.FC = () => {
     setTransactions(prev => prev.filter(tx => tx.fuelRecordId !== id));
   };
 
-  const addMaintenance = (order: Omit<MaintenanceOrder, 'id'>) => setMaintenances(prev => [...prev, { ...order, id: crypto.randomUUID() }]);
+  const addMaintenance = (order: Omit<MaintenanceOrder, 'id'>) => setMaintenances(prev => [...prev, { ...order, id: generateId() }]);
   const updateMaintenance = (order: MaintenanceOrder) => setMaintenances(prev => prev.map(m => m.id === order.id ? order : m));
   const deleteMaintenance = (id: string) => {
     if (transactions.some(tx => tx.maintenanceId === id)) return alert("Esta OS possui custos vinculados e não pode ser excluída.");
     setMaintenances(prev => prev.filter(m => m.id !== id));
   };
 
-  const addBudgetRequest = (req: Omit<BudgetRequest, 'id' | 'options'>) => setBudgets(prev => [...prev, { ...req, id: crypto.randomUUID(), options: [] }]);
+  const addBudgetRequest = (req: Omit<BudgetRequest, 'id' | 'options'>) => setBudgets(prev => [...prev, { ...req, id: generateId(), options: [] }]);
   const deleteBudgetRequest = (id: string) => setBudgets(prev => prev.filter(b => b.id !== id));
   const addOptionToRequest = (requestId: string, option: Omit<BudgetOption, 'id' | 'isSelected'>) => {
     setBudgets(prev => prev.map(b => b.id === requestId ? {
       ...b,
-      options: [...b.options, { ...option, id: crypto.randomUUID(), isSelected: false }]
+      options: [...b.options, { ...option, id: generateId(), isSelected: false }]
     } : b));
   };
   const deleteOptionFromRequest = (requestId: string, optionId: string) => setBudgets(prev => prev.map(b => b.id === requestId ? {
@@ -256,7 +285,7 @@ const App: React.FC = () => {
         onClose={() => setIsSidebarOpen(false)} 
       />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <Header 
           currentView={currentView} 
           pendingCount={pendingTransactions.length} 

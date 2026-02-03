@@ -20,25 +20,39 @@ const CloudSync: React.FC<CloudSyncProps> = ({ user, onLogin, onLogout, onBackup
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    /* @ts-ignore */
-    if (window.google && window.google.accounts) {
+    // Safety check for window.google
+    const initializeGoogle = () => {
       /* @ts-ignore */
-      window.google.accounts.id.initialize({
-        client_id: "713915854445-5688688468846884.apps.googleusercontent.com",
-        callback: (response: any) => onLogin(response.credential),
-      });
+      if (window.google && window.google.accounts) {
+        /* @ts-ignore */
+        window.google.accounts.id.initialize({
+          client_id: "713915854445-5688688468846884.apps.googleusercontent.com",
+          callback: (response: any) => onLogin(response.credential),
+        });
 
-      if (!user) {
-        const btnContainer = document.getElementById("googleBtn");
-        if (btnContainer) {
-          /* @ts-ignore */
-          window.google.accounts.id.renderButton(
-            btnContainer,
-            { theme: "outline", size: "large", width: "100%", text: "continue_with" }
-          );
+        if (!user) {
+          const btnContainer = document.getElementById("googleBtn");
+          if (btnContainer) {
+            /* @ts-ignore */
+            window.google.accounts.id.renderButton(
+              btnContainer,
+              { theme: "outline", size: "large", width: "100%", text: "continue_with" }
+            );
+          }
         }
       }
-    }
+    };
+
+    // Retry initialization if google is not yet defined
+    const timer = setInterval(() => {
+      /* @ts-ignore */
+      if (window.google) {
+        initializeGoogle();
+        clearInterval(timer);
+      }
+    }, 500);
+
+    return () => clearInterval(timer);
   }, [user]);
 
   const handleSyncAction = async (action: () => void) => {
