@@ -1,24 +1,28 @@
 
 <!DOCTYPE html>
-<html lang="pt-br" class="h-full overflow-hidden">
+<html lang="pt-br" class="h-full overflow-hidden" style="overscroll-behavior-y: none;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>FrotaFin - Gestão de Frotas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
+        html, body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
             height: 100%;
+            width: 100%;
             overflow: hidden;
+            /* Impede o pull-to-refresh no nível da página */
+            overscroll-behavior-y: none;
         }
         #root {
             height: 100%;
             width: 100%;
+            display: flex;
         }
         #loading-screen {
             position: fixed;
@@ -56,13 +60,24 @@
             font-size: 12px;
         }
 
+        /* Área de rolagem segura que impede que o gesto suba para o navegador */
         .safe-scroll {
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            overscroll-behavior-y: contain;
+            /* contain ou none impedem o efeito de mola que ativa o reload */
+            overscroll-behavior-y: none;
+            height: 100%;
         }
         .safe-scroll::-webkit-scrollbar {
             display: none;
+        }
+
+        /* Fix para iOS Safari onde a barra de endereços pode sumir/aparecer */
+        @supports (-webkit-touch-callout: none) {
+          .h-screen {
+            height: -webkit-fill-available;
+          }
         }
     </style>
     
