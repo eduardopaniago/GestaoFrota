@@ -41,7 +41,6 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Debug Error Overlay */
         #error-display {
             display: none;
             position: fixed;
@@ -59,14 +58,11 @@
     </style>
     
     <script>
-        // Polyfills e Configurações Globais
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
         
-        // Resolve o aviso de node-domexception
         if (typeof window.DOMException === 'undefined') { window.DOMException = Error; }
 
-        // Capturador de erros globais para evitar tela branca silenciosa
         window.onerror = function(msg, url, line, col, error) {
             const display = document.getElementById('error-display');
             if (display) {
@@ -76,11 +72,6 @@
             return false;
         };
 
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Promessa rejeitada não tratada:', event.reason);
-        });
-
-        // Fallback de segurança para remover o loading
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
@@ -88,7 +79,7 @@
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 500);
                 }
-            }, 8000);
+            }, 5000);
         });
     </script>
 
@@ -113,7 +104,7 @@
     <div id="error-display"></div>
     <div id="loading-screen">
         <div class="spinner"></div>
-        <p style="margin-top: 16px; color: #1e293b; font-weight: 700; font-size: 14px;">Iniciando Sistema...</p>
+        <p style="margin-top: 16px; color: #1e293b; font-weight: 700; font-size: 14px;">Iniciando FrotaFin...</p>
     </div>
     <div id="root"></div>
     <script src="https://cdn.tailwindcss.com"></script>
