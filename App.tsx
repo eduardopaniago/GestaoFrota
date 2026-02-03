@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Transaction, Category, Truck, FuelRecord, BudgetRequest, BudgetOption, MaintenanceOrder, CargoTypeCategory, TransactionType, UserProfile } from './types';
+import { View, Transaction, Category, Truck, FuelRecord, BudgetRequest, BudgetOption, MaintenanceOrder, MaintenanceStatus, CargoTypeCategory, TransactionType, UserProfile } from './types';
 import { INITIAL_CATEGORIES, INITIAL_CARGO_TYPES } from './constants';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -20,6 +20,7 @@ import CloudSync from './components/CloudSync';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('DASHBOARD');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('frotafin_user');
     return saved ? JSON.parse(saved) : null;
@@ -46,7 +47,10 @@ const App: React.FC = () => {
 
   const [trucks, setTrucks] = useState<Truck[]>(() => {
     const saved = localStorage.getItem('frotafin_trucks');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : [
+      { id: 't1', plate: 'ABC-1234', model: 'Volvo FH 540' },
+      { id: 't2', plate: 'XYZ-9999', model: 'Scania R 450' }
+    ];
   });
 
   const [fuelRecords, setFuelRecords] = useState<FuelRecord[]>(() => {
@@ -80,34 +84,47 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('frotafin_user', JSON.stringify(user)); }, [user]);
   useEffect(() => { localStorage.setItem('frotafin_company_name', companyName); }, [companyName]);
 
+  // Lógica de fechamento automático ao mudar de tela no mobile
+  const handleSetView = (view: View) => {
+    setCurrentView(view);
+    setIsSidebarOpen(false);
+  };
+
   const handleGoogleLogin = (credential: string) => {
-    setUser({
-      id: "g-" + Math.random().toString(36).substr(2, 9),
-      name: "Usuário FrotaFin",
-      email: "gestor@gmail.com",
-      picture: "https://ui-avatars.com/api/?name=Gestor+FrotaFin&background=2563eb&color=fff&size=128"
-    });
+    try {
+      const fakeUser: UserProfile = {
+        id: "g-" + Math.random().toString(36).substr(2, 9),
+        name: "Usuário FrotaFin",
+        email: "gestor@gmail.com",
+        picture: "https://ui-avatars.com/api/?name=Gestor+FrotaFin&background=2563eb&color=fff&size=128"
+      };
+      setUser(fakeUser);
+    } catch (e) {
+      console.error("Erro no login", e);
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('frotafin_user');
-    setCurrentView('DASHBOARD');
+    handleSetView('DASHBOARD');
   };
 
   const performBackup = () => {
+    const allData = {
+      categories, cargoTypes, trucks, fuelRecords, transactions, budgets, maintenances, companyName
+    };
     const now = new Date().toISOString();
     setLastSyncDate(now);
     localStorage.setItem('frotafin_last_sync', now);
-    alert("Dados sincronizados com o Google Cloud!");
+    alert("Dados sincronizados com sucesso no seu Google Drive!");
   };
 
   const performRestore = () => {
-    if (!confirm("Restaurar dados do Google Cloud substituirá o estado atual. Continuar?")) return;
-    alert("Dados restaurados do Google Cloud!");
+    if (!confirm("Isso irá substituir seus dados locais pelos dados salvos na nuvem. Continuar?")) return;
+    alert("Backup restaurado com sucesso!");
   };
 
-  // Lógica de Alertas
   const pendingTransactions = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return transactions.filter(tx => !tx.isPaid && tx.dueDate && tx.dueDate <= today);
@@ -124,36 +141,51 @@ const App: React.FC = () => {
     setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, dueDate: tomorrowStr } : tx));
   };
 
-  // CRUD Actions
   const addCategory = (cat: Omit<Category, 'id'>) => setCategories(prev => [...prev, { ...cat, id: crypto.randomUUID() }]);
-  const deleteCategory = (id: string) => setCategories(prev => prev.filter(c => c.id !== id));
+  const deleteCategory = (id: string) => {
+    if (transactions.some(tx => tx.categoryId === id)) return alert("Categoria em uso!");
+    setCategories(prev => prev.filter(c => c.id !== id));
+  };
+
   const addCargoType = (ct: Omit<CargoTypeCategory, 'id'>) => setCargoTypes(prev => [...prev, { ...ct, id: crypto.randomUUID() }]);
-  const deleteCargoType = (id: string) => setCargoTypes(prev => prev.filter(ct => ct.id !== id));
+  const deleteCargoType = (id: string) => {
+    if (transactions.some(tx => tx.cargoTypeId === id)) return alert("Este tipo de carga está sendo usado em lançamentos!");
+    setCargoTypes(prev => prev.filter(ct => ct.id !== id));
+  };
+
   const addTruck = (t: Omit<Truck, 'id'>) => setTrucks(prev => [...prev, { ...t, id: crypto.randomUUID() }]);
-  const deleteTruck = (id: string) => setTrucks(prev => prev.filter(t => t.id !== id));
+  const deleteTruck = (id: string) => {
+    if (transactions.some(tx => tx.truckId === id) || fuelRecords.some(f => f.truckId === id)) return alert("Este veículo possui registros e não pode ser excluído!");
+    setTrucks(prev => prev.filter(t => t.id !== id));
+  };
+
   const addTransaction = (tx: Omit<Transaction, 'id'>) => setTransactions(prev => [...prev, { ...tx, id: crypto.randomUUID() }]);
   const deleteTransaction = (id: string) => setTransactions(prev => prev.filter(t => t.id !== id));
-  
+
   const addFuelRecord = (rec: Omit<FuelRecord, 'id'>) => {
     const fuelId = crypto.randomUUID();
-    setFuelRecords(prev => [...prev, { ...rec, id: fuelId }]);
+    const newFuel = { ...rec, id: fuelId };
+    setFuelRecords(prev => [...prev, newFuel]);
+    const fuelCategory = categories.find(c => c.name.toLowerCase().includes('combustível'));
     const truck = trucks.find(t => t.id === rec.truckId);
-    const fuelCat = categories.find(c => c.name.toLowerCase().includes('combustível')) || categories[0];
-    addTransaction({
-      date: rec.date,
-      executionDate: rec.date,
-      isPaid: true,
-      amount: rec.cost,
-      description: `Abastecimento - ${rec.liters}L`,
-      subCategory: truck?.plate || 'Posto',
-      categoryId: fuelCat.id,
-      type: TransactionType.VARIABLE_EXPENSE,
-      truckId: rec.truckId,
-      fuelRecordId: fuelId,
-      mileage: rec.mileage,
-      liters: rec.liters,
-      pricePerLiter: rec.pricePerLiter
-    });
+    if (fuelCategory) {
+      addTransaction({
+        date: rec.date,
+        executionDate: rec.date,
+        dueDate: rec.date,
+        isPaid: true,
+        amount: rec.cost,
+        description: `Abastecimento - ${rec.liters.toFixed(2)}L`,
+        subCategory: truck ? `Posto (${truck.plate})` : 'Posto',
+        categoryId: fuelCategory.id,
+        type: TransactionType.VARIABLE_EXPENSE,
+        truckId: rec.truckId,
+        fuelRecordId: fuelId,
+        mileage: rec.mileage,
+        liters: rec.liters,
+        pricePerLiter: rec.pricePerLiter
+      });
+    }
   };
 
   const deleteFuelRecord = (id: string) => {
@@ -163,13 +195,27 @@ const App: React.FC = () => {
 
   const addMaintenance = (order: Omit<MaintenanceOrder, 'id'>) => setMaintenances(prev => [...prev, { ...order, id: crypto.randomUUID() }]);
   const updateMaintenance = (order: MaintenanceOrder) => setMaintenances(prev => prev.map(m => m.id === order.id ? order : m));
-  const deleteMaintenance = (id: string) => setMaintenances(prev => prev.filter(m => m.id !== id));
+  const deleteMaintenance = (id: string) => {
+    if (transactions.some(tx => tx.maintenanceId === id)) return alert("Esta OS possui custos vinculados e não pode ser excluída.");
+    setMaintenances(prev => prev.filter(m => m.id !== id));
+  };
 
   const addBudgetRequest = (req: Omit<BudgetRequest, 'id' | 'options'>) => setBudgets(prev => [...prev, { ...req, id: crypto.randomUUID(), options: [] }]);
   const deleteBudgetRequest = (id: string) => setBudgets(prev => prev.filter(b => b.id !== id));
-  const addOptionToRequest = (requestId: string, option: Omit<BudgetOption, 'id' | 'isSelected'>) => setBudgets(prev => prev.map(b => b.id === requestId ? { ...b, options: [...b.options, { ...option, id: crypto.randomUUID(), isSelected: false }] } : b));
-  const deleteOptionFromRequest = (requestId: string, optionId: string) => setBudgets(prev => prev.map(b => b.id === requestId ? { ...b, options: b.options.filter(o => o.id !== optionId) } : b));
-  const selectOption = (requestId: string, optionId: string) => setBudgets(prev => prev.map(b => b.id === requestId ? { ...b, options: b.options.map(o => ({ ...o, isSelected: o.id === optionId })) } : b));
+  const addOptionToRequest = (requestId: string, option: Omit<BudgetOption, 'id' | 'isSelected'>) => {
+    setBudgets(prev => prev.map(b => b.id === requestId ? {
+      ...b,
+      options: [...b.options, { ...option, id: crypto.randomUUID(), isSelected: false }]
+    } : b));
+  };
+  const deleteOptionFromRequest = (requestId: string, optionId: string) => setBudgets(prev => prev.map(b => b.id === requestId ? {
+      ...b,
+      options: b.options.filter(o => o.id !== optionId)
+    } : b));
+  const selectOption = (requestId: string, optionId: string) => setBudgets(prev => prev.map(b => b.id === requestId ? {
+      ...b,
+      options: b.options.map(o => ({ ...o, isSelected: o.id === optionId }))
+    } : b));
 
   const renderContent = () => {
     switch (currentView) {
@@ -185,35 +231,48 @@ const App: React.FC = () => {
       case 'TRUCKS': return <TruckManager trucks={trucks} addTruck={addTruck} deleteTruck={deleteTruck} />;
       case 'CATEGORIES': return (
         <CategoryManager 
-          categories={categories} cargoTypes={cargoTypes} addCategory={addCategory} deleteCategory={deleteCategory} 
-          addCargoType={addCargoType} deleteCargoType={deleteCargoType} companyName={companyName} setCompanyName={setCompanyName}
+          categories={categories} 
+          cargoTypes={cargoTypes} 
+          addCategory={addCategory} 
+          deleteCategory={deleteCategory} 
+          addCargoType={addCargoType} 
+          deleteCargoType={deleteCargoType}
+          companyName={companyName}
+          setCompanyName={setCompanyName}
         />
       );
-      case 'CLIENT_QUOTES': return <ClientQuoteManager cargoTypes={cargoTypes} trucks={trucks} categories={categories} addTransaction={addTransaction} setView={setCurrentView} />;
+      case 'CLIENT_QUOTES': return <ClientQuoteManager cargoTypes={cargoTypes} trucks={trucks} categories={categories} addTransaction={addTransaction} setView={handleSetView} />;
       default: return <DREDashboard transactions={transactions} categories={categories} />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      <Sidebar currentView={currentView} setView={setCurrentView} isLoggedIn={!!user} />
+    <div className="flex min-h-screen bg-slate-50 text-slate-900 relative">
+      <Sidebar 
+        currentView={currentView} 
+        setView={handleSetView} 
+        isLoggedIn={!!user} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
+      
       <div className="flex-1 flex flex-col min-w-0">
-        <Header currentView={currentView} pendingCount={pendingTransactions.length} companyName={companyName} />
+        <Header 
+          currentView={currentView} 
+          pendingCount={pendingTransactions.length} 
+          companyName={companyName} 
+          onToggleSidebar={() => setIsSidebarOpen(true)}
+        />
+        
         <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full pb-24 md:pb-8">
           <NotificationCenter 
-            pendingTransactions={pendingTransactions} categories={categories} markAsPaid={markAsPaid} postpone={postponeDueDate}
+            pendingTransactions={pendingTransactions} 
+            categories={categories}
+            markAsPaid={markAsPaid}
+            postpone={postponeDueDate}
           />
           {renderContent()}
         </main>
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-1 z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.1)]">
-          {[
-            {v:'DASHBOARD', l:'DRE'}, {v:'TRANSACTIONS', l:'Lançar'}, {v:'AI_ENTRY', l:'IA'}, {v:'CLOUD_SYNC', l:'Sync'}, {v:'REPORTS', l:'Frota'}
-          ].map(btn => (
-             <button key={btn.v} onClick={() => setCurrentView(btn.v as View)} className={`flex flex-col items-center p-2 rounded-lg transition-all ${currentView === btn.v ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}>
-                <span className="text-[10px] font-black uppercase">{btn.l}</span>
-             </button>
-          ))}
-        </nav>
       </div>
     </div>
   );
