@@ -14,7 +14,7 @@
             padding: 0;
             -webkit-tap-highlight-color: transparent;
             height: 100%;
-            overflow: hidden; /* Mantém a tela fixa para o App gerenciar a rolagem */
+            overflow: hidden;
         }
         #root {
             height: 100%;
@@ -56,7 +56,6 @@
             font-size: 12px;
         }
 
-        /* Melhora a rolagem em dispositivos móveis */
         .safe-scroll {
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
@@ -67,6 +66,10 @@
         }
     </style>
     
+    <!-- Scripts do Google -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+
     <script>
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;

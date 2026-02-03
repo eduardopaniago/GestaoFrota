@@ -116,37 +116,24 @@ const App: React.FC = () => {
     setIsSidebarOpen(false);
   };
 
-  const handleGoogleLogin = (credential: string) => {
-    try {
-      const fakeUser: UserProfile = {
-        id: "g-" + Math.random().toString(36).substr(2, 9),
-        name: "Usuário FrotaFin",
-        email: "gestor@gmail.com",
-        picture: "https://ui-avatars.com/api/?name=Gestor+FrotaFin&background=2563eb&color=fff&size=128"
-      };
-      setUser(fakeUser);
-    } catch (e) {
-      console.error("Erro no login", e);
-    }
+  const handleRestoreFromCloud = (data: any) => {
+    if (data.categories) setCategories(data.categories);
+    if (data.cargoTypes) setCargoTypes(data.cargoTypes);
+    if (data.trucks) setTrucks(data.trucks);
+    if (data.fuelRecords) setFuelRecords(data.fuelRecords);
+    if (data.transactions) setTransactions(data.transactions);
+    if (data.budgets) setBudgets(data.budgets);
+    if (data.maintenances) setMaintenances(data.maintenances);
+    if (data.companyName) setCompanyName(data.companyName);
+    const now = new Date().toISOString();
+    setLastSyncDate(now);
+    localStorage.setItem('frotafin_last_sync', now);
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('frotafin_user');
     handleSetView('DASHBOARD');
-  };
-
-  const performBackup = () => {
-    const allData = { categories, cargoTypes, trucks, fuelRecords, transactions, budgets, maintenances, companyName };
-    const now = new Date().toISOString();
-    setLastSyncDate(now);
-    localStorage.setItem('frotafin_last_sync', now);
-    alert("Dados sincronizados com sucesso no seu Google Drive!");
-  };
-
-  const performRestore = () => {
-    if (!confirm("Isso irá substituir seus dados locais pelos dados salvos na nuvem. Continuar?")) return;
-    alert("Backup restaurado com sucesso!");
   };
 
   const pendingTransactions = useMemo(() => {
@@ -241,12 +228,34 @@ const App: React.FC = () => {
       options: b.options.map(o => ({ ...o, isSelected: o.id === optionId }))
     } : b));
 
+  const getCurrentDataForBackup = () => {
+    return {
+      categories,
+      cargoTypes,
+      trucks,
+      fuelRecords,
+      transactions,
+      budgets,
+      maintenances,
+      companyName
+    };
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'DASHBOARD': return <DREDashboard transactions={transactions} categories={categories} />;
       case 'TRANSACTIONS': return <TransactionForm categories={categories} cargoTypes={cargoTypes} trucks={trucks} transactions={transactions} maintenances={maintenances} addTransaction={addTransaction} deleteTransaction={deleteTransaction} markAsPaid={markAsPaid} />;
       case 'AI_ENTRY': return <AIIntelligentEntry categories={categories} trucks={trucks} cargoTypes={cargoTypes} addTransaction={addTransaction} addFuelRecord={addFuelRecord} />;
-      case 'CLOUD_SYNC': return <CloudSync user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} onBackup={performBackup} onRestore={performRestore} lastSyncDate={lastSyncDate} />;
+      case 'CLOUD_SYNC': return (
+        <CloudSync 
+          user={user} 
+          allData={getCurrentDataForBackup()}
+          onLogin={(u) => setUser(u)} 
+          onLogout={handleLogout} 
+          onRestore={handleRestoreFromCloud} 
+          lastSyncDate={lastSyncDate} 
+        />
+      );
       case 'IMPORT': return <ImportManager categories={categories} trucks={trucks} addTransaction={addTransaction} />;
       case 'FUEL': return <FuelControl trucks={trucks} fuelRecords={fuelRecords} addFuelRecord={addFuelRecord} deleteFuelRecord={deleteFuelRecord} />;
       case 'WORKSHOP': return <WorkshopManager trucks={trucks} maintenances={maintenances} transactions={transactions} categories={categories} addMaintenance={addMaintenance} updateMaintenance={updateMaintenance} deleteMaintenance={deleteMaintenance} addTransaction={addTransaction} deleteTransaction={deleteTransaction} />;
