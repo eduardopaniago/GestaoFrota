@@ -40,6 +40,22 @@
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Debug Error Overlay */
+        #error-display {
+            display: none;
+            position: fixed;
+            inset: 20px;
+            background: #fff1f2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #fecaca;
+            z-index: 10000;
+            overflow: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
     </style>
     
     <script>
@@ -47,19 +63,32 @@
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
         
-        // Resolve o aviso de node-domexception garantindo o nativo
+        // Resolve o aviso de node-domexception
         if (typeof window.DOMException === 'undefined') { window.DOMException = Error; }
 
-        // Fallback de segurança: remove o loading se o React demorar demais (crash silencioso)
+        // Capturador de erros globais para evitar tela branca silenciosa
+        window.onerror = function(msg, url, line, col, error) {
+            const display = document.getElementById('error-display');
+            if (display) {
+                display.style.display = 'block';
+                display.innerHTML = `<h3>Erro de Execução:</h3><p>${msg}</p><small>${url} L:${line} C:${col}</small>`;
+            }
+            return false;
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Promessa rejeitada não tratada:', event.reason);
+        });
+
+        // Fallback de segurança para remover o loading
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
                 if (loader && loader.style.display !== 'none') {
-                    console.warn("Remoção forçada da tela de loading via timeout de segurança.");
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 500);
                 }
-            }, 5000);
+            }, 8000);
         });
     </script>
 
@@ -81,12 +110,14 @@
 <link rel="stylesheet" href="/index.css">
 </head>
 <body>
+    <div id="error-display"></div>
     <div id="loading-screen">
         <div class="spinner"></div>
         <p style="margin-top: 16px; color: #1e293b; font-weight: 700; font-size: 14px;">Iniciando Sistema...</p>
     </div>
     <div id="root"></div>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
 </html>
