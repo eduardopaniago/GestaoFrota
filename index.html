@@ -1,29 +1,42 @@
 
 <!DOCTYPE html>
-<html lang="pt-br" class="h-full overflow-hidden" style="overscroll-behavior-y: none;">
+<html lang="pt-br" class="h-full overflow-hidden" style="overscroll-behavior: none;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>FrotaFin - Gestão de Frotas</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sar: env(safe-area-inset-right);
+            --sab: env(safe-area-inset-bottom);
+            --sal: env(safe-area-inset-left);
+        }
+
         html, body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
+            /* Trava a página principal para não mover */
             height: 100%;
             width: 100%;
             overflow: hidden;
-            /* Impede o pull-to-refresh no nível da página */
+            position: fixed;
+            overscroll-behavior: none;
             overscroll-behavior-y: none;
+            touch-action: none; /* Desativa gestos padrão no nível da página */
         }
+
         #root {
             height: 100%;
             width: 100%;
             display: flex;
+            touch-action: auto; /* Reativa toques para os elementos internos */
         }
+
         #loading-screen {
             position: fixed;
             inset: 0;
@@ -35,6 +48,7 @@
             z-index: 9999;
             transition: opacity 0.5s ease;
         }
+
         .spinner {
             width: 40px;
             height: 40px;
@@ -43,6 +57,7 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         #error-display {
@@ -60,20 +75,21 @@
             font-size: 12px;
         }
 
-        /* Área de rolagem segura que impede que o gesto suba para o navegador */
+        /* Área de rolagem configurada para isolar o scroll */
         .safe-scroll {
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
-            /* contain ou none impedem o efeito de mola que ativa o reload */
-            overscroll-behavior-y: none;
+            overscroll-behavior-y: contain; /* Impede que o scroll transborde para o navegador */
             height: 100%;
+            width: 100%;
+            touch-action: pan-y; /* Permite apenas scroll vertical e ignora gestos de sistema */
         }
+
         .safe-scroll::-webkit-scrollbar {
             display: none;
         }
 
-        /* Fix para iOS Safari onde a barra de endereços pode sumir/aparecer */
         @supports (-webkit-touch-callout: none) {
           .h-screen {
             height: -webkit-fill-available;
@@ -85,6 +101,25 @@
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
         if (typeof window.DOMException === 'undefined') { window.DOMException = Error; }
+
+        // BLOQUEIO NUCLEAR DE PULL-TO-REFRESH
+        let touchStart = 0;
+        document.addEventListener('touchstart', function(e) {
+            touchStart = e.touches[0].pageY;
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            const touchMove = e.touches[0].pageY;
+            // Se o usuário tentar puxar para baixo
+            if (touchMove > touchStart) {
+                // Verificamos se quem está tentando scrollar é a nossa área de scroll ou o topo
+                const scrollContainer = document.querySelector('.safe-scroll');
+                if (scrollContainer && scrollContainer.scrollTop <= 0) {
+                    if (e.cancelable) e.preventDefault();
+                }
+            }
+        }, { passive: false });
+
         window.onerror = function(msg, url, line, col, error) {
             const display = document.getElementById('error-display');
             if (display) {
