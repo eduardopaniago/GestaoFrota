@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Receipt, Settings, Truck, Fuel, BarChart3, Scale, Wrench, Calculator, FileSpreadsheet, Sparkles, CloudSync as CloudIcon } from 'lucide-react';
+import { LayoutDashboard, Receipt, Settings, Truck, Fuel, BarChart3, Wrench, Calculator, FileSpreadsheet, Sparkles, CloudSync as CloudIcon } from 'lucide-react';
 import { View } from '../types';
 
 interface SidebarProps {
@@ -14,7 +14,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isLoggedIn }) =
     { id: 'DASHBOARD', label: 'Dashboard DRE', icon: LayoutDashboard },
     { id: 'TRANSACTIONS', label: 'Lançamentos', icon: Receipt },
     { id: 'AI_ENTRY', label: 'Lançamento IA', icon: Sparkles },
-    { id: 'CLOUD_SYNC', label: 'Sincronizar Cloud', icon: CloudIcon, highlight: !isLoggedIn },
+    { id: 'CLOUD_SYNC', label: 'Sincronizar Google', icon: CloudIcon, highlight: !isLoggedIn },
     { id: 'IMPORT', label: 'Importar Planilha', icon: FileSpreadsheet },
     { id: 'FUEL', label: 'Combustível', icon: Fuel },
     { id: 'WORKSHOP', label: 'Oficina / Manut.', icon: Wrench },
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isLoggedIn }) =
           >
             <item.icon size={20} />
             <span className="font-medium text-sm">{item.label}</span>
-            {item.highlight && (
+            {item.highlight && currentView !== item.id && (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
             )}
           </button>
@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isLoggedIn }) =
       </nav>
       <div className="p-4 border-t border-slate-800">
         <div className="text-xs text-slate-500 text-center">
-          © 2024 FrotaFin v1.6
+          © 2024 FrotaFin v1.7
         </div>
       </div>
     </aside>

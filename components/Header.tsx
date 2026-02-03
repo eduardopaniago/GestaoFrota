@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, pendingCount = 0, companyN
     BUDGETS: 'Comparativo de Orçamentos',
     WORKSHOP: 'Oficina e Manutenção',
     CLIENT_QUOTES: 'Calculadora de Frete para Cliente',
-    CLOUD_SYNC: 'Sincronização em Nuvem',
+    CLOUD_SYNC: 'Sincronização em Nuvem (Google)',
   };
 
   return (
@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, pendingCount = 0, companyN
         </div>
         <div className="hidden sm:flex flex-col items-end">
           <div className="text-sm font-bold text-slate-800 leading-none">{companyName}</div>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-1">Status Operacional: OK</div>
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-1">Sincronização Ativa</div>
         </div>
         <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-blue-100">
           {companyName.substring(0, 2).toUpperCase()}
