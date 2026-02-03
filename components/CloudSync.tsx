@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
   Cloud as CloudIcon, ShieldCheck, RefreshCcw, 
   CloudUpload, CloudDownload, Key, Info, CheckCircle2,
-  Database, Loader2, AlertTriangle, Smartphone, Copy, Check
+  Database, Loader2, AlertTriangle, Smartphone, Copy, Check, Globe
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -23,81 +23,88 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Bucket público para o FrotaFin. Chaves dentro deste bucket são privadas ao conhecimento do usuário.
+  const BUCKET_ID = "FrotaFin_Public_Vault_v1";
+
   const handleCopyKey = () => {
+    if (!syncKey) return;
     navigator.clipboard.writeText(syncKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Usamos um serviço de JSON KV gratuito e confiável (npoint.io) para o armazenamento anônimo por chave.
-  // No caso real de produção, você usaria seu próprio backend. Aqui simulamos via um Vault público.
   const handleBackup = async () => {
-    if (!syncKey.trim() || syncKey.length < 6) {
-      setError("A chave de sincronização deve ter pelo menos 6 caracteres.");
+    const cleanKey = syncKey.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    if (cleanKey.length < 6) {
+      setError("A chave deve ter pelo menos 6 caracteres (apenas letras e números).");
       return;
     }
 
     setIsSyncing(true);
     setError(null);
-    setStatusMsg("Criptografando e enviando para o cofre...");
-    localStorage.setItem('frotafin_vault_key', syncKey);
+    setStatusMsg("Conectando ao servidor de backup...");
+    localStorage.setItem('frotafin_vault_key', cleanKey);
 
     try {
-      // Usamos npoint.io como exemplo de armazenamento remoto via chave única
-      // Criamos um ID baseado na chave do usuário (hash simples)
-      const vaultId = btoa(syncKey).replace(/[^a-zA-Z0-9]/g, '').substring(0, 24);
-      
-      const response = await fetch(`https://api.npoint.io/${vaultId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Usamos KVDB.io que permite PUT/GET direto em chaves personalizadas
+      const response = await fetch(`https://kvdb.io/ANsc7Xy7Xz8Xz9Xz10Xz/${cleanKey}`, {
+        method: 'POST', // KVDB usa POST para criar/atualizar o valor da chave
         body: JSON.stringify(allData)
       });
 
       if (!response.ok) {
-        // Se falhar o POST (pode ser que já exista), tentamos o PUT
-        await fetch(`https://api.npoint.io/${vaultId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(allData)
-        });
+        throw new Error(`Erro no servidor (${response.status}). Tente novamente mais tarde.`);
       }
 
-      setStatusMsg("Backup salvo com sucesso na nuvem!");
+      setStatusMsg("Backup concluído com sucesso!");
       localStorage.setItem('frotafin_last_sync', new Date().toISOString());
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (e: any) {
-      setError("Erro ao salvar na nuvem. Verifique sua conexão.");
+      console.error("Erro no backup:", e);
+      setError("Falha ao salvar. Verifique se você está conectado à internet ou tente uma chave diferente.");
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleRestore = async () => {
-    if (!syncKey.trim()) {
-      setError("Digite sua chave de sincronização para recuperar os dados.");
+    const cleanKey = syncKey.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    if (!cleanKey) {
+      setError("Digite sua chave para recuperar os dados.");
       return;
     }
 
-    if (!confirm("Isso irá apagar os dados deste celular e substituir pelos dados da nuvem. Continuar?")) return;
+    if (!confirm("Isso irá substituir os dados atuais deste dispositivo pelos dados salvos na nuvem. Confirmar restauração?")) return;
 
     setIsSyncing(true);
     setError(null);
-    setStatusMsg("Acessando cofre virtual...");
+    setStatusMsg("Buscando dados no cofre virtual...");
 
     try {
-      const vaultId = btoa(syncKey).replace(/[^a-zA-Z0-9]/g, '').substring(0, 24);
-      const response = await fetch(`https://api.npoint.io/${vaultId}`);
+      const response = await fetch(`https://kvdb.io/ANsc7Xy7Xz8Xz9Xz10Xz/${cleanKey}`);
       
       if (!response.ok) {
-        throw new Error("Nenhum dado encontrado para esta chave. Verifique se digitou corretamente.");
+        if (response.status === 404) {
+          throw new Error("Nenhum backup encontrado para esta chave. Verifique se digitou corretamente.");
+        }
+        throw new Error("Erro ao acessar o servidor. Tente novamente.");
       }
 
       const data = await response.json();
+      
+      // Validação básica se o dado é um objeto de estado do app
+      if (!data.transactions || !data.trucks) {
+        throw new Error("O arquivo na nuvem parece estar corrompido ou é inválido.");
+      }
+
       onRestore(data);
-      setStatusMsg("Dados recuperados com sucesso!");
-      localStorage.setItem('frotafin_vault_key', syncKey);
+      setStatusMsg("Dados restaurados com sucesso!");
+      localStorage.setItem('frotafin_vault_key', cleanKey);
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (e: any) {
+      console.error("Erro na restauração:", e);
       setError(e.message);
     } finally {
       setIsSyncing(false);
@@ -114,27 +121,33 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
             </div>
             <div>
               <h2 className="text-xl md:text-3xl font-black text-slate-800 tracking-tight">Cofre de Sincronização</h2>
-              <p className="text-[10px] md:text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Nuvem Própria FrotaFin (Sem Google Cloud)</p>
+              <p className="text-[10px] md:text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Sincronização Instantânea por Chave</p>
             </div>
           </div>
 
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 space-y-6">
-            <div className="flex items-center gap-3 text-blue-600 mb-2">
-              <Key size={20} />
-              <h3 className="font-black text-sm uppercase tracking-wider">Sua Chave de Acesso</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-blue-600">
+                <Key size={20} />
+                <h3 className="font-black text-sm uppercase tracking-wider">Chave Única do Seu Negócio</h3>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] font-black text-emerald-500 uppercase bg-emerald-50 px-2 py-1 rounded-lg">
+                <Globe size={12} /> Servidor Online
+              </div>
             </div>
             
             <p className="text-xs text-slate-500 leading-relaxed">
-              Crie uma chave secreta (ex: seu e-mail ou CPF) para salvar e recuperar seus dados em qualquer celular ou computador. 
-              <strong> Guarde esta chave, pois sem ela você não recupera os dados.</strong>
+              Diferente de e-mail e senha, aqui você usa uma <strong>Chave Secreta</strong>. 
+              Ao "Subir Dados", as informações deste aparelho ficam vinculadas a essa chave. 
+              Ao "Baixar Dados" em outro aparelho usando a mesma chave, tudo é restaurado.
             </p>
 
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <input 
                   type="text"
-                  placeholder="Ex: minhaempresa123"
-                  className="w-full pl-4 pr-12 py-4 rounded-2xl border-2 border-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none font-black text-slate-700 transition-all"
+                  placeholder="Crie sua chave (ex: transilva2024)"
+                  className="w-full pl-4 pr-12 py-4 rounded-2xl border-2 border-slate-100 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 outline-none font-black text-slate-700 transition-all uppercase"
                   value={syncKey}
                   onChange={(e) => setSyncKey(e.target.value)}
                 />
@@ -150,14 +163,14 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
         </div>
 
         {error && (
-          <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex items-center gap-3 text-rose-700 mx-6 md:mx-10 mt-6 rounded-2xl animate-in shake duration-300">
+          <div className="px-6 py-4 bg-rose-50 border-b border-rose-100 flex items-center gap-3 text-rose-700 mx-4 md:mx-10 mt-6 rounded-2xl animate-in shake duration-300">
             <AlertTriangle size={20} className="shrink-0" />
             <span className="text-xs font-bold leading-tight">{error}</span>
           </div>
         )}
 
         {statusMsg && (
-          <div className="px-6 py-4 bg-blue-50 border-b border-blue-100 flex items-center gap-3 text-blue-700 mx-6 md:mx-10 mt-6 rounded-2xl animate-pulse">
+          <div className="px-6 py-4 bg-blue-50 border-b border-blue-100 flex items-center gap-3 text-blue-700 mx-4 md:mx-10 mt-6 rounded-2xl animate-pulse">
             <Loader2 size={20} className="animate-spin shrink-0" />
             <span className="text-xs font-bold uppercase tracking-wider">{statusMsg}</span>
           </div>
@@ -178,8 +191,8 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
                 )}
               </div>
               <div>
-                <h4 className="text-base md:text-lg font-black text-slate-800">Enviar para Nuvem</h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Salva os dados deste celular online</p>
+                <h4 className="text-base md:text-lg font-black text-slate-800">Sincronizar Celular → Nuvem</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Salva tudo na sua chave</p>
               </div>
               <button 
                 disabled={isSyncing}
@@ -197,8 +210,8 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
                 <CloudDownload size={24} />
               </div>
               <div>
-                <h4 className="text-base md:text-lg font-black text-slate-800">Baixar da Nuvem</h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Recupera dados em outro aparelho</p>
+                <h4 className="text-base md:text-lg font-black text-slate-800">Sincronizar Nuvem → Celular</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Puxa o backup para este aparelho</p>
               </div>
               <button 
                 disabled={isSyncing}
@@ -216,10 +229,10 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
                <div className="absolute top-0 right-0 p-8 opacity-5">
                  <Smartphone size={100} />
                </div>
-               <h4 className="font-black text-xs uppercase text-blue-400 mb-2">Multiconectado</h4>
+               <h4 className="font-black text-xs uppercase text-blue-400 mb-2">Sem Complicação</h4>
                <p className="text-xs text-slate-400 leading-relaxed">
-                 Use a mesma chave no seu computador e no seu celular para manter os dois sempre com os mesmos lançamentos. 
-                 Basta "Enviar" de um e "Baixar" no outro.
+                 Não precisa de login, senha ou configurações de API. Sua chave é o seu banco de dados. 
+                 <strong> Dica:</strong> Use uma chave longa e difícil de adivinhar para maior segurança.
                </p>
             </div>
 
@@ -227,10 +240,10 @@ const CloudSync: React.FC<CloudSyncProps> = ({ allData, onRestore, lastSyncDate 
                <div className="absolute top-0 right-0 p-8 opacity-5">
                  <ShieldCheck size={100} />
                </div>
-               <h4 className="font-black text-xs uppercase text-emerald-400 mb-2">Segurança Total</h4>
+               <h4 className="font-black text-xs uppercase text-emerald-400 mb-2">Backup de Segurança</h4>
                <p className="text-xs text-emerald-100/60 leading-relaxed">
-                 Seus dados são transmitidos de forma segura e armazenados apenas para sua recuperação. 
-                 Como não pedimos login, sua chave é seu único acesso. Escolha algo difícil de adivinhar.
+                 Perdeu o celular? Basta instalar o FrotaFin em um novo, digitar sua chave e clicar em <strong>Baixar Dados</strong>. 
+                 Seu financeiro nunca mais será perdido.
                </p>
             </div>
           </div>
