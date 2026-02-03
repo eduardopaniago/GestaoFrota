@@ -66,16 +66,10 @@
         }
     </style>
     
-    <!-- Scripts do Google -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-
     <script>
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
-        
         if (typeof window.DOMException === 'undefined') { window.DOMException = Error; }
-
         window.onerror = function(msg, url, line, col, error) {
             const display = document.getElementById('error-display');
             if (display) {
@@ -84,16 +78,6 @@
             }
             return false;
         };
-
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const loader = document.getElementById('loading-screen');
-                if (loader && loader.style.display !== 'none') {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.style.display = 'none', 500);
-                }
-            }, 5000);
-        });
     </script>
 
     <script type="importmap">
