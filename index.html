@@ -60,12 +60,12 @@
         window.process = { env: { NODE_ENV: 'production' } };
         window.global = window;
         
-        // Resolve o aviso de node-domexception forçando o uso do nativo
+        // Resolve o aviso de node-domexception forçando o uso do nativo da plataforma
         if (typeof window.DOMException === 'undefined') {
             window.DOMException = Error; 
         }
 
-        // Mostra botão de emergência se o JS demorar muito (8s)
+        // Script de segurança: Se o React falhar em montar em 8 segundos, mostra botão de forçar entrada
         setTimeout(() => {
             const btn = document.getElementById('emergency-btn');
             if (btn) btn.style.display = 'block';
@@ -104,7 +104,7 @@
         <button id="emergency-btn" class="emergency-btn" onclick="forceAppStart()">O app não carregou? Clique aqui</button>
     </div>
     <div id="root"></div>
-    <!-- Tailwind carregado de forma que não bloqueia o render inicial -->
+    <!-- Carregamento do Tailwind via CDN seguro -->
     <script src="https://cdn.tailwindcss.com"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
